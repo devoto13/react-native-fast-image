@@ -1,9 +1,13 @@
-import { OnProgressEvent } from './index.d';
 import * as React from 'react'
-import { FlexStyle, LayoutChangeEvent, ShadowStyleIOS, StyleProp, TransformsStyle } from 'react-native'
+import {
+    FlexStyle,
+    LayoutChangeEvent,
+    ShadowStyleIOS,
+    StyleProp,
+    TransformsStyle,
+} from 'react-native'
 
 declare namespace FastImage {
-
     namespace priority {
         type low = 'low'
         type normal = 'normal'
@@ -17,22 +21,34 @@ declare namespace FastImage {
         type center = 'center'
     }
 
+    namespace cacheControl {
+        type cacheOnly = 'cacheOnly'
+        type immutable = 'immutable'
+        type web = 'web'
+    }
+
     export type Priority =
-        FastImage.priority.low |
-        FastImage.priority.normal |
-        FastImage.priority.high
+        | FastImage.priority.low
+        | FastImage.priority.normal
+        | FastImage.priority.high
 
     export type ResizeMode =
-        FastImage.resizeMode.contain |
-        FastImage.resizeMode.cover |
-        FastImage.resizeMode.stretch |
-        FastImage.resizeMode.center
+        | FastImage.resizeMode.contain
+        | FastImage.resizeMode.cover
+        | FastImage.resizeMode.stretch
+        | FastImage.resizeMode.center
+
+    export type Cache =
+        | FastImage.cacheControl.cacheOnly
+        | FastImage.cacheControl.immutable
+        | FastImage.cacheControl.web
 }
 
 export type FastImageSource = {
-    uri?: string,
-    headers?: object
+    uri?: string
+    headers?: { [key: string]: string }
     priority?: FastImage.Priority
+    cache?: FastImage.Cache
 }
 
 export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
@@ -67,6 +83,7 @@ export interface OnProgressEvent {
 export interface FastImageProperties {
     source: FastImageSource | number
     resizeMode?: FastImage.ResizeMode
+    fallback?: boolean
 
     onLoadStart?(): void
 
@@ -113,12 +130,19 @@ interface FastImageStatic extends React.ComponentClass<FastImageProperties> {
         high: FastImage.priority.high
     }
 
+    cacheControl: {
+        cacheOnly: FastImage.cacheControl.cacheOnly
+        immutable: FastImage.cacheControl.immutable
+        web: FastImage.cacheControl.web
+    }
+
     preload(sources: FastImageSource[]): void
 
     loadImage(source: FastImageSource): Promise<string>
 }
 
 declare var FastImage: FastImageStatic
+
 type FastImage = FastImageStatic
 
 export default FastImage

@@ -16,6 +16,7 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.views.imagehelper.ImageSource;
 
 import java.io.File;
 
@@ -52,11 +53,20 @@ class FastImageViewModule extends ReactContextBaseJavaModule {
             public void run() {
                 for (int i = 0; i < sources.size(); i++) {
                     final ReadableMap source = sources.getMap(i);
-                    final GlideUrl glideUrl = FastImageViewConverter.getGlideUrl(source);
+                    final FastImageSource imageSource = FastImageViewConverter.getImageSource(activity, source);
 
                     Glide
                             .with(activity.getApplicationContext())
-                            .load(urlForGlideUrl(glideUrl))
+                            // This will make this work for remote and local images. e.g.
+                            //    - file:///
+                            //    - content://
+                            //    - res:/
+                            //    - android.resource://
+                            //    - data:image/png;base64
+                            .load(
+                                    imageSource.isBase64Resource() ? imageSource.getSource() :
+                                    imageSource.isResource() ? imageSource.getUri() : imageSource.getGlideUrl()
+                            )
                             .apply(FastImageViewConverter.getOptions(source))
                             .preload();
                 }

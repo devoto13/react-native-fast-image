@@ -1,7 +1,6 @@
-import React, { Component } from 'react'
+import React, { forwardRef } from 'react'
 import PropTypes from 'prop-types'
 import {
-    Platform,
     View,
     Image,
     NativeModules,
@@ -10,19 +9,11 @@ import {
     StyleSheet,
 } from 'react-native'
 
-const resolveAssetSource = require('react-native/Libraries/Image/resolveAssetSource')
-
 const FastImageViewNativeModule = NativeModules.FastImageView
 
-class FastImage extends Component {
-    setNativeProps(nativeProps) {
-        this._root.setNativeProps(nativeProps)
-    }
-
-    captureRef = e => (this._root = e)
-
-    render() {
-        const {
+const FastImage = forwardRef(
+    (
+        {
             source,
             onLoadStart,
             onProgress,
@@ -33,17 +24,15 @@ class FastImage extends Component {
             children,
             fallback,
             ...props
-        } = this.props
-
-        const resolvedSource = resolveAssetSource(source)
+        },
+        ref,
+    ) => {
+        const resolvedSource = Image.resolveAssetSource(source)
 
         if (fallback) {
             return (
-                <View
-                    style={[style, styles.imageContainer]}
-                    ref={this.captureRef}
-                >
-                    <FastImageView
+                <View style={[styles.imageContainer, style]} ref={ref}>
+                    <Image
                         {...props}
                         style={StyleSheet.absoluteFill}
                         source={resolvedSource}
@@ -59,7 +48,7 @@ class FastImage extends Component {
         }
 
         return (
-            <View style={[style, styles.imageContainer]} ref={this.captureRef}>
+            <View style={[styles.imageContainer, style]} ref={ref}>
                 <FastImageView
                     {...props}
                     style={StyleSheet.absoluteFill}
@@ -73,8 +62,10 @@ class FastImage extends Component {
                 {children}
             </View>
         )
-    }
-}
+    },
+)
+
+FastImage.displayName = 'FastImage'
 
 const styles = StyleSheet.create({
     imageContainer: {
