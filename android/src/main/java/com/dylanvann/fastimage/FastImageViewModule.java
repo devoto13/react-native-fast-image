@@ -81,12 +81,15 @@ class FastImageViewModule extends ReactContextBaseJavaModule {
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final GlideUrl glideUrl = FastImageViewConverter.getGlideUrl(source);
-
+                // final GlideUrl glideUrl = FastImageViewConverter.getGlideUrl(source);
+                final FastImageSource imageSource = FastImageViewConverter.getImageSource(activity, source);
+                
                 Glide
                         .with(activity.getApplicationContext())
                         .asFile()
-                        .load(urlForGlideUrl(glideUrl))
+                        .load(
+                            imageSource.isBase64Resource() ? imageSource.getSource() :
+                            imageSource.isResource() ? imageSource.getUri() : imageSource.getGlideUrl())
                         .apply(FastImageViewConverter.getOptions(source))
                         .listener(new RequestListener<File>() {
                             @Override
