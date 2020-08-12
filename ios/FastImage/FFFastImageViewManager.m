@@ -2,6 +2,7 @@
 #import "FFFastImageView.h"
 
 #import <SDWebImage/SDWebImagePrefetcher.h>
+#import <SDWebImage/SDImageCache.h>
 
 @implementation FFFastImageViewManager
 
@@ -32,6 +33,66 @@ RCT_EXPORT_METHOD(preload:(nonnull NSArray<FFFastImageSource *> *)sources)
     }];
 
     [[SDWebImagePrefetcher sharedImagePrefetcher] prefetchURLs:urls];
+}
+
+RCT_REMAP_METHOD(
+  loadImage,
+  loadImageWithSource: (nonnull FFFastImageSource *)source resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject
+) {
+  SDWebImageManager *imageManager = [SDWebImageManager sharedManager];
+  SDImageCache *cache = (SDImageCache *) imageManager.imageCache;
+  
+  // Set headers.
+  NSDictionary *headers = source.headers;
+  SDWebImageDownloaderRequestModifier *requestModifier = [SDWebImageDownloaderRequestModifier requestModifierWithBlock:^NSURLRequest * _Nullable(NSURLRequest * _Nonnull request) {
+      NSMutableURLRequest *mutableRequest = [request mutableCopy];
+      for (NSString *header in headers) {
+          NSString *value = headers[header];
+          [mutableRequest setValue:value forHTTPHeaderField:header];
+      }
+      return [mutableRequest copy];
+  }];
+  SDWebImageContext *context = @{SDWebImageContextDownloadRequestModifier : requestModifier};
+  
+  // Set priority.
+  SDWebImageOptions options = SDWebImageRetryFailed | SDWebImageHandleCookies;
+  switch (source.priority) {
+      case FFFPriorityLow:
+          options |= SDWebImageLowPriority;
+          break;
+      case FFFPriorityNormal:
+          // Priority is normal by default.
+          break;
+      case FFFPriorityHigh:
+          options |= SDWebImageHighPriority;
+          break;
+  }
+  
+  switch (source.cacheControl) {
+      case FFFCacheControlWeb:
+          options |= SDWebImageRefreshCached;
+          break;
+      case FFFCacheControlCacheOnly:
+          options |= SDWebImageFromCacheOnly;
+          break;
+      case FFFCacheControlImmutable:
+          break;
+  }
+  
+  // load image
+  [imageManager loadImageWithURL:source.url options:options context:context progress:nil completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, SDImageCacheType cacheType, BOOL finished, NSURL * _Nullable imageURL) {
+    if (error != nil) {
+      reject(@"FastImage", @"Failed to load image", error);
+      return;
+    }
+
+    NSString *cacheKey = [imageManager cacheKeyForURL:source.url];
+    // store image manually (since image manager may call the completion block before storing it in the disk cache)
+    [cache storeImage:image forKey:cacheKey completion:^{
+      NSString *imagePath = [cache cachePathForKey:cacheKey];
+      resolve(imagePath);
+    }];
+  }];
 }
 
 @end
